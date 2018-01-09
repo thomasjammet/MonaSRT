@@ -57,4 +57,6 @@ struct OutputApp : virtual Mona::App {
 	virtual OutputApp::Client* newClient(Mona::Exception& ex, Mona::Client& client, Mona::DataReader& parameters, Mona::DataWriter& response);
 
 	virtual void manage() {}
+private:
+	std::string _target;
 };

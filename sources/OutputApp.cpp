@@ -109,10 +109,25 @@ class OutputApp::Client::OpenSrtPIMPL {
 
 			INFO("Connecting to ", _addr.host(), " port ", _addr.port())
 
-			if (::srt_connect(_socket, _addr.data(), _addr.family() == IPAddress::IPv6 ? sizeof(sockaddr_in6) : sizeof(sockaddr_in))) {
-				ERROR("SRT Connect: ", ::srt_getlasterror_str());
-				Disconnect();
-				return false;
+			if ((true)) {
+				// Mona BUG: _addr.size() always returns sizeof(sockaddr_in6)
+				FATAL_CHECK(_addr.size() >= sizeof(sockaddr));
+
+				// Mona BUG: family is always set to AF_INET6
+				sockaddr addr;
+				memcpy(&addr, _addr.data(), sizeof(sockaddr));
+				addr.sa_family = AF_INET;
+				if (::srt_connect(_socket, &addr, sizeof(sockaddr))) {
+					ERROR("SRT Connect: ", ::srt_getlasterror_str());
+					Disconnect();
+					return false;
+				}
+			} else {
+				if (::srt_connect(_socket, _addr.data(), _addr.family() == IPAddress::IPv6 ? sizeof(sockaddr_in6) : sizeof(sockaddr_in))) {
+					ERROR("SRT Connect: ", ::srt_getlasterror_str());
+					Disconnect();
+					return false;
+				}
 			}
 
 			INFO("SRT connect state; ", ::srt_getsockstate(_socket));
@@ -179,6 +194,7 @@ private:
 
 OutputApp::OutputApp(const Parameters& configs): App(configs)
 {
+	_target.assign(configs.getString("srt.target", "localhost:4900"));
 }
 
 OutputApp::~OutputApp() {
@@ -354,5 +370,5 @@ bool OutputApp::Client::writePayload(UInt16 context, shared_ptr<Buffer>& pBuffer
 
 OutputApp::Client* OutputApp::newClient(Mona::Exception& ex, Mona::Client& client, Mona::DataReader& parameters, Mona::DataWriter& response) {
 
-	return new Client(client, "localhost:4900");
+	return new Client(client, _target);
 }

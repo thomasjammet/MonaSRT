@@ -27,6 +27,18 @@ struct ServerApp : ServerApplication  {
 		return Application::EXIT_OK;
 	}
 
+	void defineOptions(Exception& ex, Options& options)
+	{
+		options.add(ex, "srttarget", "st", "Specify SRT target.")
+			.argument("<host>:<port>")
+			.handler([this](Exception& ex, const string& value) { 
+				setString("srt.target", value);
+				return true; });
+
+		ServerApplication::defineOptions(ex, options);
+	}
+private:
+	std::string _target;
 };
 
 int main(int argc, const char* argv[]) {
