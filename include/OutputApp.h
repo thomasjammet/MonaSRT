@@ -44,6 +44,9 @@ struct OutputApp : virtual Mona::App {
 		Mona::Publication::OnVideo					_onVideo;
 		Mona::Publication::OnEnd					_onEnd;
 		Mona::Publication*							_pPublication;
+		
+		class OpenSrtPIMPL;
+		std::unique_ptr<OpenSrtPIMPL> _srtPimpl;
 	};
 
 	OutputApp(const Mona::Parameters& configs);

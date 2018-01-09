@@ -32,7 +32,7 @@ namespace Mona {
 //// Server Events /////
 void MonaSRT::onStart() {
 
-	_applications["/output"] = new OutputApp(*this);
+	_applications["/srt"] = new OutputApp(*this);
 }
 
 void MonaSRT::manage() {

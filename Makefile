@@ -12,10 +12,10 @@ EXEC?=MonaSRT
 
 # Variables extendable
 CFLAGS+=-D_GLIBCXX_USE_C99 -std=c++11 -Wall -Wno-reorder -Wno-terminate -Wunknown-pragmas -Wno-unknown-warning-option -D__BIG_ENDIAN__=$(BIG_ENDIAN) -D_FILE_OFFSET_BITS=64
-override INCLUDES+=-I../MonaBase/include/ -I../MonaCore/include/ -I./include -I../
-LIBDIRS+=-L../MonaBase/lib/ -L../MonaCore/lib/
-LDFLAGS+="-Wl,-rpath,../MonaBase/lib/,-rpath,../MonaCore/lib/,-rpath,/usr/local/lib/"
-LIBS+=-pthread -lMonaBase -lMonaCore -lcrypto -lssl
+override INCLUDES+=-I../MonaBase/include/ -I../MonaCore/include/ -I./include -I../ -I./srt/include/
+LIBDIRS+=-L../MonaBase/lib/ -L../MonaCore/lib/ -L./srt/lib/
+LDFLAGS+="-Wl,-rpath,../MonaBase/lib/,-rpath,../MonaCore/lib/,-rpath,/usr/local/lib/,-rpath,./srt/lib/"
+LIBS+=-pthread -lMonaBase -lMonaCore -lcrypto -lssl -lsrt
 ifneq ($(OS),FreeBSD)
 	LIBS+= -ldl
 endif
