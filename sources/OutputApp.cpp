@@ -338,6 +338,7 @@ OutputApp::Client::Client(Mona::Client& client, const string& host) : App::Clien
 		/*if (_stopping)
 			return resetSRT();
 		*/
+		shared<Buffer> pBuffer;
 
 		// AAC codecs to be sent in first
 		if (!_audioCodecSent) {
@@ -345,43 +346,26 @@ OutputApp::Client::Client(Mona::Client& client, const string& host) : App::Clien
 
 				INFO("AAC codec infos saved")
 				_audioCodec.set(std::move(packet));
-				_audioTag.reset(new Media::Audio::Tag(tag));
 			}
 			if (!_audioCodec)
 				return;
 
 			_audioCodecSent = true;
 			INFO("AAC codec infos sent")
-			if (!tag.isConfig) {
-				shared<Buffer> pBuffer(new Buffer());
-				BinaryWriter writer(*pBuffer);
-				if (_first) {
-					_tsWriter.beginMedia([&writer](const Packet& output) { writer.write(output); });
-					_first = false;
-				}
-				_tsWriter.writeAudio(0, *_audioTag, _audioCodec, [&writer](const Packet& output) { writer.write(output); });
-				if (!writePayload(0, pBuffer)) {
-					//_stopping = true;
-					return;
-				}
-			}
+			Media::Audio::Tag configTag(tag);
+			configTag.isConfig = true;
+			configTag.time = tag.time;
+			if (!tag.isConfig && !writePayload(0, writeFrame(pBuffer, configTag, _audioCodec)))
+				return;
 		}
 
-		shared<Buffer> pBuffer(new Buffer());
-		BinaryWriter writer(*pBuffer);
-		if (_first) {
-			_tsWriter.beginMedia([&writer](const Packet& output) { writer.write(output); });
-			_first = false;
-		}
-		_tsWriter.writeAudio(0, tag, packet, [&writer](const Packet& output) { writer.write(output); });
-		if (!writePayload(0, pBuffer)) {
-			//_stopping = true;
+		if (!writePayload(0, writeFrame(pBuffer, tag, packet))) 
 			return;
-		}
 	};
 	_onVideo = [this](UInt16 track, const Media::Video::Tag& tag, const Packet& packet) {
 		/*if (_stopping)
 			return resetSRT();*/
+		shared<Buffer> pBuffer;
 
 		// Video codecs to be sent in first
 		if (!_videoCodecSent) {
@@ -391,7 +375,6 @@ OutputApp::Client::Client(Mona::Client& client, const string& host) : App::Clien
 			if (isAVCConfig) {
 				INFO("Video codec infos saved")
 				_videoCodec.set(std::move(packet));
-				_videoTag.reset(new Media::Video::Tag(tag));
 			}
 			if (!_videoCodec)
 				return;
@@ -403,32 +386,24 @@ OutputApp::Client::Client(Mona::Client& client, const string& host) : App::Clien
 
 			_videoCodecSent = true;
 			INFO("Video codec infos sent")
-			if (!isAVCConfig) {
-				shared<Buffer> pBuffer(new Buffer());
-				BinaryWriter writer(*pBuffer);
-				if (_first) {
-					_tsWriter.beginMedia([&writer](const Packet& output) { writer.write(output); });
-					_first = false;
-				}
-				_tsWriter.writeVideo(0, *_videoTag, _videoCodec, [&writer](const Packet& output) { writer.write(output); });
-				if (!writePayload(0, pBuffer)) {
-					//_stopping = true;
-					return;
-				}
-			}
+			Media::Video::Tag configTag(tag);
+			configTag.frame = Media::Video::FRAME_CONFIG;
+			configTag.time = tag.time;
+			if (!isAVCConfig && !writePayload(0, writeFrame(pBuffer, configTag, _videoCodec)))
+				return;
+		}
+		// Send Regularly the codec infos (TODO: Add at timer?)
+		else if (tag.codec == Media::Video::CODEC_H264 && tag.frame == Media::Video::FRAME_KEY) {
+			INFO("Sending codec infos")
+			Media::Video::Tag configTag(tag);
+			configTag.frame = Media::Video::FRAME_CONFIG;
+			configTag.time = tag.time;
+			if (!writePayload(0, writeFrame(pBuffer, configTag, _videoCodec)))
+				return;
 		}
 
-		shared<Buffer> pBuffer(new Buffer());
-		BinaryWriter writer(*pBuffer);
-		if (_first) {
-			_tsWriter.beginMedia([&writer](const Packet& output) { writer.write(output); });
-			_first = false;
-		}
-		_tsWriter.writeVideo(0, tag, packet, [&writer](const Packet& output) { writer.write(output); });
-		if (!writePayload(0, pBuffer)) {
-			//_stopping = true;
+		if (!writePayload(0, writeFrame(pBuffer, tag, packet)))
 			return;
-		}
 	};
 	_onEnd = [this]() {
 		resetSRT();
@@ -478,10 +453,18 @@ void OutputApp::Client::resetSRT() {
 
 	_tsWriter.endMedia([](const Packet& packet) {}); // reset the ts writer
 	_videoCodec.reset();
-	_videoTag.reset();
 	_audioCodec.reset();
-	_audioTag.reset();
 	_first = false;
+}
+
+template <>
+void OutputApp::Client::writeMedia<Media::Video::Tag>(Mona::BinaryWriter& writer, const Media::Video::Tag& tag, const Mona::Packet& packet) {
+	_tsWriter.writeVideo(0, tag, packet, [&writer](const Packet& output) { writer.write(output); });
+}
+
+template <>
+void OutputApp::Client::writeMedia<Media::Audio::Tag>(Mona::BinaryWriter& writer, const Media::Audio::Tag& tag, const Mona::Packet& packet) {
+	_tsWriter.writeAudio(0, tag, packet, [&writer](const Packet& output) { writer.write(output); });
 }
 
 bool OutputApp::Client::writePayload(UInt16 context, shared_ptr<Buffer>& pBuffer) {

@@ -22,6 +22,23 @@ struct OutputApp : virtual Mona::App {
 		virtual void onUnsubscribe(const Mona::Subscription& subscription, const Mona::Publication& publication) {}
 	
 	private:
+
+		template <class Tag>
+		Mona::shared<Mona::Buffer>& writeFrame(Mona::shared<Mona::Buffer>& pBuffer, const Tag& tag, const Mona::Packet& packet) {
+
+			pBuffer.reset(new Mona::Buffer());
+			Mona::BinaryWriter writer(*pBuffer);
+			if (_first) {
+				_tsWriter.beginMedia([&writer](const Mona::Packet& output) { writer.write(output); });
+				_first = false;
+			}
+			writeMedia(writer, tag, packet);
+			return pBuffer;
+		}
+
+		template <class Tag>
+		void writeMedia(Mona::BinaryWriter& writer, const Tag& tag, const Mona::Packet& packet);
+
 		// Inject the TS buffer into SRT 
 		// return False if an error occurs, True otherwise
 		bool writePayload(Mona::UInt16 context, std::shared_ptr<Mona::Buffer>& pBuffer);
@@ -33,10 +50,8 @@ struct OutputApp : virtual Mona::App {
 		Mona::TSWriter								_tsWriter;
 		Mona::Packet								_videoCodec; // video codec to be saved
 		bool										_videoCodecSent;
-		std::unique_ptr<Mona::Media::Video::Tag>	_videoTag; // video tag to be saved
 		Mona::Packet								_audioCodec; // audio codec to be saved
 		bool										_audioCodecSent;
-		std::unique_ptr<Mona::Media::Audio::Tag>	_audioTag; // audio tag to be saved
 		bool										_first; // To write the FLV header when the first packet is written
 
 		std::string									_host; // host address to connect to (and bind to)
