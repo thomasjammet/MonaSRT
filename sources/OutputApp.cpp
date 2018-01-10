@@ -141,25 +141,14 @@ class OutputApp::Client::OpenSrtPIMPL : private Thread {
 
 			INFO("Connecting to ", _addr.host(), " port ", _addr.port())
 
-			if ((true)) {
-				// Mona BUG: _addr.size() always returns sizeof(sockaddr_in6)
-				FATAL_CHECK(_addr.size() >= sizeof(sockaddr));
-
-				// Mona BUG: family is always set to AF_INET6
-				sockaddr addr;
-				memcpy(&addr, _addr.data(), sizeof(sockaddr));
-				addr.sa_family = AF_INET;
-				if (::srt_connect(_socket, &addr, sizeof(sockaddr))) {
-					ERROR("SRT Connect: ", ::srt_getlasterror_str());
-					DisconnectActual();
-					return false;
-				}
-			} else {
-				if (::srt_connect(_socket, _addr.data(), _addr.family() == IPAddress::IPv6 ? sizeof(sockaddr_in6) : sizeof(sockaddr_in))) {
-					ERROR("SRT Connect: ", ::srt_getlasterror_str());
-					DisconnectActual();
-					return false;
-				}
+			// SRT support only IPV4 so we convert to a sockaddr_in
+			sockaddr addr;
+			memcpy(&addr, _addr.data(), sizeof(sockaddr)); // WARN: work only with ipv4 addresses
+			addr.sa_family = AF_INET;
+			if (::srt_connect(_socket, &addr, sizeof(sockaddr))) {
+				ERROR("SRT Connect: ", ::srt_getlasterror_str());
+				DisconnectActual();
+				return false;
 			}
 
 			INFO("SRT connect state; ", ::srt_getsockstate(_socket));

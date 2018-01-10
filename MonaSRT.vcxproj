@@ -93,7 +93,7 @@
     <ClCompile>
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>C:\pthread-win32\include;../External/include;../MonaBase/include;../MonaCore/include;include;..</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\pthread-win32\include;./srt/include;../External/include;../MonaBase/include;../MonaCore/include;include;..</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -108,7 +108,7 @@
     <Link>
       <AdditionalDependencies>srt.lib;MonaBased.lib;MonaCored.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(ProjectName).exe</OutputFile>
-      <AdditionalLibraryDirectories>C:\pthread-win32\lib;../External/lib;../MonaBase/lib;../MonaCore/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\pthread-win32\lib;./srt/lib;../External/lib;../MonaBase/lib;../MonaCore/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>Debug</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -125,7 +125,7 @@
     <ClCompile>
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>C:\pthread-win32\include;../External/include64;../MonaBase/include;../MonaCore/include;include;..</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\pthread-win32\include;./srt/include;../External/include64;../MonaBase/include;../MonaCore/include;include;..</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -141,7 +141,7 @@
     <Link>
       <AdditionalDependencies>srt.lib;MonaBase64d.lib;MonaCore64d.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalLibraryDirectories>C:\pthread-win32\lib;../External/lib64;../MonaBase/lib;../MonaCore/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\pthread-win32\lib;./srt/lib;../External/lib64;../MonaBase/lib;../MonaCore/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -157,7 +157,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <WholeProgramOptimization>true</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>C:\pthread-win32\include;../External/include;../MonaBase/include;../MonaCore/include;include;..</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\pthread-win32\include;./srt/include;../External/include;../MonaBase/include;../MonaCore/include;include;..</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -174,7 +174,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>MonaBase.lib;MonaCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\pthread-win32\lib;../External/lib;../MonaBase/lib;../MonaCore/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\pthread-win32\lib;./srt/lib;../External/lib;../MonaBase/lib;../MonaCore/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>No</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -195,7 +195,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <WholeProgramOptimization>true</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>C:\pthread-win32\include;../External/include64;../MonaBase/include;../MonaCore/include;include;..</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\pthread-win32\include;./srt/include;../External/include64;../MonaBase/include;../MonaCore/include;include;..</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -216,7 +216,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>MonaBase64.lib;MonaCore64.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>../External/lib64;../MonaBase/lib;../MonaCore/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\pthread-win32\lib64;./srt/lib64;../External/lib64;../MonaBase/lib;../MonaCore/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -229,6 +229,7 @@
     <ClCompile Include="sources\MonaSRT.cpp" />
     <ClCompile Include="sources\main.cpp" />
     <ClCompile Include="sources\OutputApp.cpp" />
+    <ClCompile Include="sources\SRTIn.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MonaBase\MonaBase.vcxproj">
@@ -243,7 +244,8 @@
   <ItemGroup>
     <ClInclude Include="include\App.h" />
     <ClInclude Include="include\MonaSRT.h" />
-    <ClInclude Include="include\Mona\OutputApp.h" />
+    <ClInclude Include="include\OutputApp.h" />
+    <ClInclude Include="include\SRTIn.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
