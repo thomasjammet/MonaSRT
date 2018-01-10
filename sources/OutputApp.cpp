@@ -24,18 +24,22 @@
 #include "Mona/String.h"
 #include "Mona/AVC.h"
 #include "Mona/SocketAddress.h"
+#include "Mona/Thread.h"
 
 using namespace Mona;
 using namespace std;
 
-class OutputApp::Client::OpenSrtPIMPL {
+static const int64_t epollWaitTimoutMS = 250;
+
+class OutputApp::Client::OpenSrtPIMPL : private Thread {
 	private:
 		::SRTSOCKET _socket;
 		bool _started;
 		SocketAddress _addr;
+		std::mutex _mutex;
 	public:
 		OpenSrtPIMPL() :
-			_socket(::SRT_INVALID_SOCK), _started(false) {
+			_socket(::SRT_INVALID_SOCK), _started(false), Thread("OutputApp") {
 		}
 		~OpenSrtPIMPL() {
 			Close();
@@ -43,12 +47,12 @@ class OutputApp::Client::OpenSrtPIMPL {
 
 		bool Open(const string& host) {
 			if (_started) {
-				ERROR("Already open, please close first")
+				ERROR("SRT Open: Already open, please close first")
 				return false;
 			}
 
 			if (::srt_startup()) {
-				ERROR("Error starting SRT library")
+				ERROR("SRT Open: Error starting SRT library")
 				return false;
 			}
 			_started = true;
@@ -58,9 +62,15 @@ class OutputApp::Client::OpenSrtPIMPL {
 
 			Exception ex;
 			if (!_addr.set(ex, host) || _addr.family() != IPAddress::IPv4) {
-				ERROR("SRT Connect: can't resolve target host, ", host)
+				ERROR("SRT Open: can't resolve target host, ", host)
 				Close();
 				return false;
+			}
+
+			if (!Thread::start(ex)) {
+				ERROR("SRT Open: can't start monitor thread")
+				Close();
+				return false;				
 			}
 
 			INFO("SRT opened")
@@ -70,6 +80,7 @@ class OutputApp::Client::OpenSrtPIMPL {
 
 		void Close() {
 			Disconnect();
+			Thread::stop();
 
 			if (_started) {
 				::srt_setloghandler(nullptr, nullptr);
@@ -81,6 +92,11 @@ class OutputApp::Client::OpenSrtPIMPL {
 		}
 
 		bool Connect() {
+			std::lock_guard<std::mutex> lock(_mutex);
+			return ConnectActual();
+		}
+
+		bool ConnectActual() {
 			if (!_addr) {
 				ERROR("Open first")
 				return false;
@@ -93,7 +109,23 @@ class OutputApp::Client::OpenSrtPIMPL {
 
 			_socket = ::srt_socket(AF_INET, SOCK_DGRAM, 0);
 			if (_socket == ::SRT_INVALID_SOCK ) {
-				ERROR("SRT Connect: ", ::srt_getlasterror_str());
+				ERROR("SRT create socket: ", ::srt_getlasterror_str());
+				return false;
+			}
+
+			bool block = false;
+			int rc = ::srt_setsockopt(_socket, 0, SRTO_SNDSYN, &block, sizeof(block));
+			if (rc != 0)
+			{
+				DisconnectActual();
+				ERROR("SRT SRTO_SNDSYN: ", ::srt_getlasterror_str());
+				return false;
+			}
+			rc = ::srt_setsockopt(_socket, 0, SRTO_RCVSYN, &block, sizeof(block));
+			if (rc != 0)
+			{
+				ERROR("SRT SRTO_RCVSYN: ", ::srt_getlasterror_str());
+				DisconnectActual();
 				return false;
 			}
 
@@ -103,7 +135,7 @@ class OutputApp::Client::OpenSrtPIMPL {
 			::SRT_SOCKSTATUS state = ::srt_getsockstate(_socket);
 			if (state != SRTS_INIT) {
 				ERROR("SRT Connect: socket is in bad state; ", state)
-				Disconnect();
+				DisconnectActual();
 				return false;
 			}
 
@@ -119,13 +151,13 @@ class OutputApp::Client::OpenSrtPIMPL {
 				addr.sa_family = AF_INET;
 				if (::srt_connect(_socket, &addr, sizeof(sockaddr))) {
 					ERROR("SRT Connect: ", ::srt_getlasterror_str());
-					Disconnect();
+					DisconnectActual();
 					return false;
 				}
 			} else {
 				if (::srt_connect(_socket, _addr.data(), _addr.family() == IPAddress::IPv6 ? sizeof(sockaddr_in6) : sizeof(sockaddr_in))) {
 					ERROR("SRT Connect: ", ::srt_getlasterror_str());
-					Disconnect();
+					DisconnectActual();
 					return false;
 				}
 			}
@@ -136,6 +168,11 @@ class OutputApp::Client::OpenSrtPIMPL {
 		}
 
 		bool Disconnect() {
+			std::lock_guard<std::mutex> lock(_mutex);
+			return DisconnectActual();
+		}
+
+		bool DisconnectActual() {
 			if (_socket != ::SRT_INVALID_SOCK) {
 				::srt_close(_socket);
 
@@ -149,29 +186,31 @@ class OutputApp::Client::OpenSrtPIMPL {
 
 		int Write(shared_ptr<Buffer>& pBuffer)
 		{
-			if (_socket == ::SRT_INVALID_SOCK && !Connect()) {
-				ERROR("Failed to re-connect");
-				return -1;
+			std::lock_guard<std::mutex> lock(_mutex);
+
+			UInt8* p = pBuffer->data();
+			const size_t psize = pBuffer->size();
+
+			if (_socket == ::SRT_INVALID_SOCK) {
+				WARN("SRT: Drop packet while NOT CONNECTED")
+				return psize;
 			}
 
 			SRT_SOCKSTATUS state = ::srt_getsockstate(_socket);
 			switch(state) {
-				case ::SRTS_CONNECTING:
-					WARN("SRT: Drop packet while CONNECTING")
-					return pBuffer->size();
-				case ::SRTS_CONNECTED:
-					break;
-				default:
-					WARN("SRT: Try to re-connect on bad state; ", state)
-					Disconnect();
-					if (!Connect()) {
-						ERROR("SRT: Failed to re-connect; ", ::srt_getlasterror_str())
-						return -1;
+				case ::SRTS_CONNECTED: {
+					// No-op
+				}
+				break;
+				default: {
+					if ((false)) {
+						DEBUG("SRT: Drop packet on state ", state)
 					}
+					return psize;
+				}
+				break;
 			}
 
-			UInt8* p = pBuffer->data();
-			const size_t psize = pBuffer->size();
 			for (size_t i = 0; i < psize;) {
 				size_t chunk = min<size_t>(psize - i, (size_t)1316);
 				if (::srt_sendmsg(_socket,
@@ -181,6 +220,95 @@ class OutputApp::Client::OpenSrtPIMPL {
 			}
 
 			return psize;
+		}
+
+		bool run(Exception&, const volatile bool& requestStop) {
+
+			_mutex.lock();
+
+			int epollid = ::srt_epoll_create();
+			if (epollid < 0) {
+				ERROR("Error initializing UDT epoll set;",
+					::srt_getlasterror_str());
+			}
+
+			while(!requestStop && epollid >= 0) {
+				::SRT_SOCKSTATUS state = ::srt_getsockstate(_socket);
+				if (state == ::SRTS_BROKEN || state == ::SRTS_NONEXIST
+						|| state == ::SRTS_CLOSED) {
+					INFO("Reconnect socket");
+					if (_socket != ::SRT_INVALID_SOCK) {
+						DEBUG("Remove socket from poll; ", (int)_socket);
+						::srt_epoll_remove_usock(epollid, _socket);
+					}
+
+					DisconnectActual();
+					if (!ConnectActual()) {
+
+						ERROR("Error issuing connect");
+						break;
+					}
+
+					FATAL_CHECK(_socket != ::SRT_INVALID_SOCK)
+					int modes = SRT_EPOLL_IN;
+					if (::srt_epoll_add_usock(epollid, _socket, &modes) != 0) {
+						ERROR("Error adding socket to poll set; ",
+							::srt_getlasterror_str());
+						break;
+					}
+				}
+
+				_mutex.unlock();
+				const int socksToPoll = 10;
+				int rfdn = socksToPoll;
+				::SRTSOCKET rfds[socksToPoll];
+				int rc = ::srt_epoll_wait(epollid, &rfds[0], &rfdn, nullptr, nullptr,
+					epollWaitTimoutMS, nullptr, nullptr, nullptr, nullptr);
+
+				if (rc <= 0) {
+					// Let the system breath just in case
+					Sleep(0);
+
+					_mutex.lock();
+					continue;
+				}
+				_mutex.lock();
+
+				FATAL_CHECK(rfdn <= socksToPoll)
+
+				for (int i = 0; i < rfdn; i++) {
+					::SRTSOCKET socket = rfds[i];
+					state = ::srt_getsockstate(socket);
+					switch(state) {
+						case ::SRTS_CONNECTED: {
+							// Discard incoming data
+							static char buf[1500];
+							while (::srt_recvmsg(socket, &buf[0], sizeof(buf)) > 0)
+								continue;
+						}
+						break;
+						case ::SRTS_NONEXIST:
+						case ::SRTS_BROKEN:
+						case ::SRTS_CLOSING:
+						case ::SRTS_CLOSED: {
+							DEBUG("Remove socket from poll (on poll event); ", socket);
+							::srt_epoll_remove_usock(epollid, socket);
+						}
+						break;
+						default: {
+							WARN("Unexpected event on ",  socket, "state ", state);
+						}
+						break;
+					}
+				}
+			}
+
+			// TODO: debug this
+			if ((false) && epollid > 0)
+				::srt_epoll_release(epollid);
+
+			_mutex.unlock();
+			return true;
 		}
 
 private:
@@ -330,16 +458,11 @@ bool OutputApp::Client::onPublish(Exception& ex, Publication& publication) {
 	publication.onEnd = _onEnd;
 	_pPublication = &publication;
 
-	// Start SRT Publication
-	_srtPimpl->Connect();
-
 	return true;
 }
 
 void OutputApp::Client::onUnpublish(Publication& publication) {
 	INFO("Client from ", client.address, " has closed publication ", publication.name(), ", stopping the injection...")
-
-	_srtPimpl->Disconnect();
 
 	resetSRT();
 }
