@@ -48,6 +48,7 @@ build_script:
   - ps: msbuild MonaSRT.sln /p:Configuration=$Env:CONFIGURATION /p:Platform=x64
   - ps: cp srtbuild/${Env:CONFIGURATION}/*.dll ${Env:CONFIGURATION}/
   - ps: cp srtbuild/${Env:CONFIGURATION}/*.exe ${Env:CONFIGURATION}/
+  - ps: cp c:/openssl-win64/*.dll ${Env:CONFIGURATION}/
 
 after_build:
    - cmd: 7z a MonaSRT-%APPVEYOR_REPO_BRANCH%-%CONFIGURATION%-%APPVEYOR_BUILD_VERSION%.zip %APPVEYOR_BUILD_FOLDER%\MonaServer2\MonaSRT\%CONFIGURATION%\*
