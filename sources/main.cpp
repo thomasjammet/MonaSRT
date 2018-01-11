@@ -25,6 +25,14 @@ using namespace Mona;
 
 struct ServerApp : ServerApplication  {
 
+	ServerApp () : ServerApplication() {
+		setString("HTTP", "false");
+		setString("HTTPS", "false");
+		setString("RTMFP", "false");
+		setString("RTMFP", "false");
+		setString("logs.maxsize", "50000000");
+	}
+
 	const char* defineVersion() { return VERSION; }
 
 ///// MAIN
