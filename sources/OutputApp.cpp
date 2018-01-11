@@ -32,12 +32,13 @@ using namespace Mona;
 using namespace std;
 
 static const int64_t epollWaitTimoutMS = 250;
+static const int64_t reconnectPeriodMS = 1000;
 
 class OutputApp::Client::OpenSrtPIMPL : private Thread {
 	private:
 		::SRTSOCKET _socket;
 		bool _started;
-		SocketAddress _addr;
+		string _host;
 		std::mutex _mutex;
 	public:
 		OpenSrtPIMPL() :
@@ -58,17 +59,12 @@ class OutputApp::Client::OpenSrtPIMPL : private Thread {
 				return false;
 			}
 			_started = true;
+			_host = host;
 
 			::srt_setloghandler(nullptr, logCallback);
 			::srt_setloglevel(0xff);
 
 			Exception ex;
-			if (!_addr.set(ex, host) || _addr.family() != IPAddress::IPv4) {
-				ERROR("SRT Open: can't resolve target host, ", host)
-				Close();
-				return false;
-			}
-
 			if (!Thread::start(ex)) {
 				ERROR("SRT Open: can't start monitor thread")
 				Close();
@@ -88,9 +84,8 @@ class OutputApp::Client::OpenSrtPIMPL : private Thread {
 				::srt_setloghandler(nullptr, nullptr);
 				::srt_cleanup();
 				_started = false;
+				_host.clear();
 			}
-
-			_addr.reset();
 		}
 
 		bool Connect() {
@@ -99,8 +94,11 @@ class OutputApp::Client::OpenSrtPIMPL : private Thread {
 		}
 
 		bool ConnectActual() {
-			if (!_addr) {
-				ERROR("Open first")
+			SocketAddress addr;
+
+			Exception ex;
+			if (!addr.set(ex, _host) || addr.family() != IPAddress::IPv4) {
+				ERROR("SRT Open: can't resolve target host, ", _host)
 				return false;
 			}
 			
@@ -119,8 +117,8 @@ class OutputApp::Client::OpenSrtPIMPL : private Thread {
 			int rc = ::srt_setsockopt(_socket, 0, SRTO_SNDSYN, &block, sizeof(block));
 			if (rc != 0)
 			{
-				DisconnectActual();
 				ERROR("SRT SRTO_SNDSYN: ", ::srt_getlasterror_str());
+				DisconnectActual();
 				return false;
 			}
 			rc = ::srt_setsockopt(_socket, 0, SRTO_RCVSYN, &block, sizeof(block));
@@ -141,13 +139,13 @@ class OutputApp::Client::OpenSrtPIMPL : private Thread {
 				return false;
 			}
 
-			INFO("Connecting to ", _addr.host(), " port ", _addr.port())
+			INFO("Connecting to ", addr.host(), " port ", addr.port())
 
 			// SRT support only IPV4 so we convert to a sockaddr_in
-			sockaddr addr;
-			memcpy(&addr, _addr.data(), sizeof(sockaddr)); // WARN: work only with ipv4 addresses
-			addr.sa_family = AF_INET;
-			if (::srt_connect(_socket, &addr, sizeof(sockaddr))) {
+			sockaddr soaddr;
+			memcpy(&soaddr, addr.data(), sizeof(sockaddr)); // WARN: work only with ipv4 addresses
+			soaddr.sa_family = AF_INET;
+			if (::srt_connect(_socket, &soaddr, sizeof(sockaddr))) {
 				ERROR("SRT Connect: ", ::srt_getlasterror_str());
 				DisconnectActual();
 				return false;
@@ -183,7 +181,9 @@ class OutputApp::Client::OpenSrtPIMPL : private Thread {
 			const size_t psize = pBuffer->size();
 
 			if (_socket == ::SRT_INVALID_SOCK) {
-				WARN("SRT: Drop packet while NOT CONNECTED")
+				if ((false)) {
+					DEBUG("SRT: Drop packet while NOT CONNECTED")
+				}
 				return psize;
 			}
 
@@ -237,7 +237,12 @@ class OutputApp::Client::OpenSrtPIMPL : private Thread {
 					if (!ConnectActual()) {
 
 						ERROR("Error issuing connect");
-						break;
+
+						// Wait a bit and try again
+						_mutex.unlock();
+						Sleep(reconnectPeriodMS);
+						_mutex.lock();
+						continue;
 					}
 
 					FATAL_CHECK(_socket != ::SRT_INVALID_SOCK)
@@ -245,7 +250,6 @@ class OutputApp::Client::OpenSrtPIMPL : private Thread {
 					if (::srt_epoll_add_usock(epollid, _socket, &modes) != 0) {
 						ERROR("Error adding socket to poll set; ",
 							::srt_getlasterror_str());
-						break;
 					}
 				}
 
@@ -385,7 +389,7 @@ OutputApp::Client::Client(Mona::Client& client, const string& host) : App::Clien
 		}
 		// Send Regularly the codec infos (TODO: Add at timer?)
 		else if (tag.codec == Media::Video::CODEC_H264 && tag.frame == Media::Video::FRAME_KEY) {
-			INFO("Sending codec infos")
+			DEBUG("Sending codec infos")
 			Media::Video::Tag configTag(tag);
 			configTag.frame = Media::Video::FRAME_CONFIG;
 			configTag.time = tag.time;
