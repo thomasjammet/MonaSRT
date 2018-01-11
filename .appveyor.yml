@@ -1,0 +1,57 @@
+init:
+# -ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+ 
+configuration:
+#  - Release
+  - Debug
+
+image:
+#  - Visual Studio 2013
+  - Visual Studio 2015
+
+platform:
+  - x64
+
+build_script:
+  # build pthread
+  - git clone https://github.com/GerHobbelt/pthread-win32.git C:/pthread-src
+  - ps: "if ( $Env:APPVEYOR_BUILD_WORKER_IMAGE -eq 'Visual Studio 2013' ) { $VS_VERSION='2013' } else { $VS_VERSION='2015' }"
+  - ps: "msbuild C:/pthread-src/pthread.${VS_VERSION}.sln /p:Configuration=$Env:CONFIGURATION /p:Platform=x64"
+  - ps: mkdir C:/pthread-win32
+  - ps: mkdir C:/pthread-win32/include
+  - ps: mkdir C:/pthread-win32/lib
+  - ps: cp C:/pthread-src/*.h C:/pthread-win32/include
+  - ps: cp C:/pthread-src/bin/x64_MSVC${VS_VERSION}.${Env:CONFIGURATION}/pthread_lib.lib C:/pthread-win32/lib
+  # change directory structure
+  - ps: mkdir C:/projects/tmp/
+  - robocopy %APPVEYOR_BUILD_FOLDER% C:/projects/tmp/MonaSRT/ /move /e || exit 0
+  - git clone https://github.com/MonaSolutions/MonaServer2.git
+  - robocopy C:/projects/tmp/MonaSRT/ MonaServer2/MonaSRT/ /move /e || exit 0
+  - git clone https://github.com/Haivision/srt.git MonaServer2/MonaSRT/srtbuild
+  # build SRT
+  - ps: cd MonaServer2/MonaSRT/srtbuild
+  - ps: if ( $VS_VERSION -eq "2013" ) { $CMAKE_GENERATOR = "Visual Studio 12 2013 Win64" } else { $CMAKE_GENERATOR = "Visual Studio 14 2015 Win64" }
+  - ps: cmake . -G"$CMAKE_GENERATOR" -DCMAKE_BUILD_TYPE=$Env:CONFIGURATION
+  - ps: msbuild SRT.sln /p:Configuration=$Env:CONFIGURATION /p:Platform=x64
+  - ps: cd ..
+  - ps: mkdir srt/
+  - ps: mkdir srt/include/
+  - ps: mkdir srt/include/srt/
+  - ps: mkdir srt/include/srt/win/
+  - ps: mkdir srt/lib
+  - ps: cp srtbuild/srtcore/*.h srt/include/srt/
+  - ps: cp srtbuild/haicrypt/*.h srt/include/srt/
+  - ps: cp srtbuild/common/*.h srt/include/srt/
+  - ps: cp srtbuild/common/win/*.h srt/include/srt/win/
+  - ps: cp srtbuild/${Env:CONFIGURATION}/*.lib srt/lib/
+  # build MonaSRT
+  - ps: msbuild MonaSRT.sln /p:Configuration=$Env:CONFIGURATION /p:Platform=x64
+  - ps: cp srtbuild/${Env:CONFIGURATION}/*.dll ${Env:CONFIGURATION}/
+  - ps: cp srtbuild/${Env:CONFIGURATION}/*.exe ${Env:CONFIGURATION}/
+
+after_build:
+   - cmd: 7z a MonaSRT-%APPVEYOR_REPO_BRANCH%-%CONFIGURATION%-%APPVEYOR_BUILD_VERSION%.zip %APPVEYOR_BUILD_FOLDER%\MonaServer2\MonaSRT\%CONFIGURATION%\*
+   - cmd: appveyor PushArtifact MonaSRT-%APPVEYOR_REPO_BRANCH%-%CONFIGURATION%-%APPVEYOR_BUILD_VERSION%.zip
+
+on_finish:
+# - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))

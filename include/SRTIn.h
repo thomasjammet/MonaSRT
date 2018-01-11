@@ -15,6 +15,9 @@
 
 #pragma once
 
+#if defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__) && !defined(WIN32)
+	#define WIN32
+#endif
 #include <srt/srt.h>
 #undef LOG_INFO
 #undef LOG_DEBUG
