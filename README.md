@@ -1,5 +1,7 @@
 # MonaSRT
 
+[![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/2vn80vk7ijmtb9jx/branch/master?svg=true)](https://ci.appveyor.com/project/rndi/monasrt/branch/master)
+
 ## Compilation
 
 - Clone this repository into MonaServer2 directory,
