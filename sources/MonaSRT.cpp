@@ -34,8 +34,8 @@ void MonaSRT::onStart() {
 	_applications["/srt"] = new OutputApp(*this);
 	_srtIn = new SRTIn(*this, *this);
 	Exception ex;
-	if (!_srtIn->load())
-		ERROR("Unable to start SRTIn")
+	/*if (!_srtIn->load())
+		ERROR("Unable to start SRTIn")*/
 }
 
 void MonaSRT::manage() {
