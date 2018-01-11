@@ -17,8 +17,12 @@
 #include "Mona/ServerApplication.h"
 #include "MonaSRT.h"
 #include "Version.h"
+#include "MonaSRTVersion.h"
 
-#define VERSION		"1." STRINGIZE(MONA_VERSION)
+#define VERSION \
+	"1." STRINGIZE(MONA_VERSION) \
+	"-srt-" \
+	STRINGIZE(MONASRT_VERSION)
 
 using namespace std;
 using namespace Mona;
