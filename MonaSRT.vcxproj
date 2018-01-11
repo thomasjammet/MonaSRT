@@ -216,7 +216,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>MonaBase64.lib;MonaCore64.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\pthread-win32\lib64;./srt/lib64;../External/lib64;../MonaBase/lib;../MonaCore/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\pthread-win32\lib;./srt/lib;../External/lib64;../MonaBase/lib;../MonaCore/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
