@@ -299,7 +299,7 @@ class OutputApp::Client::OpenSrtPIMPL : private Thread {
 			}
 
 			// TODO: debug this
-			if ((false) && epollid > 0)
+			if (epollid > 0)
 				::srt_epoll_release(epollid);
 
 			_mutex.unlock();
@@ -330,9 +330,6 @@ OutputApp::Client::Client(Mona::Client& client, const string& host) : App::Clien
 	_srtPimpl->Open(host);
 
 	_onAudio = [this](UInt16 track, const Media::Audio::Tag& tag, const Packet& packet) {
-		/*if (_stopping)
-			return resetSRT();
-		*/
 		shared<Buffer> pBuffer;
 
 		// AAC codecs to be sent in first
@@ -358,8 +355,6 @@ OutputApp::Client::Client(Mona::Client& client, const string& host) : App::Clien
 			return;
 	};
 	_onVideo = [this](UInt16 track, const Media::Video::Tag& tag, const Packet& packet) {
-		/*if (_stopping)
-			return resetSRT();*/
 		shared<Buffer> pBuffer;
 
 		// Video codecs to be sent in first

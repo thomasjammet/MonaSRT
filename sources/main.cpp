@@ -30,10 +30,9 @@ using namespace Mona;
 struct ServerApp : ServerApplication  {
 
 	ServerApp () : ServerApplication() {
-		setString("HTTP", "false");
-		setString("HTTPS", "false");
-		setString("RTMFP", "false");
-		setString("RTMFP", "false");
+		setBoolean("HTTP", false);
+		setBoolean("HTTPS", false);
+		setBoolean("RTMFP", false);
 		setString("logs.maxsize", "50000000");
 	}
 

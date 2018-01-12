@@ -44,28 +44,23 @@ private:
 	virtual bool run(Mona::Exception&, const volatile bool& requestStop);
 
 	// Safe-Threaded structure to send TS data to the running publication
-	struct TSPacket : virtual Mona::Object {
-		TSPacket(const Mona::Packet& packet) : packet(std::move(packet)) {}
+	struct TSPacket : Mona::Packet, virtual Mona::Object {
+		TSPacket(const Mona::Packet& packet) : Packet(std::move(packet)) {}
 
-		const Mona::Packet& packet;
 	};
 	typedef Mona::Event<void(TSPacket&)>	ON(TSPacket);
-
-	// Call this to push TS data to the publication (switch thread to main thread)
-	void writeData(Mona::shared<Mona::Buffer>& pBuffer);
+	typedef Mona::Event<void()>				ON(TSReset);
 
 	static void LogCallback(void* opaque, int level, const char* file, int line, const char* area, const char* message);
 
 	std::string				_host;
 	std::string				_name;
 	Mona::Publication*		_publication;
-
-	Mona::SocketAddress		_addr;
-	Mona::ServerAPI&		_api;
-
 	bool					_started;
 	Mona::TSReader			_tsReader;
 
+	// members used by thread
+	Mona::SocketAddress		_addr;
+	Mona::ServerAPI&		_api;
 	::SRTSOCKET				_socket;
-	std::mutex				_mutex;
 };

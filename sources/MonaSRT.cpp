@@ -32,10 +32,10 @@ namespace Mona {
 void MonaSRT::onStart() {
 
 	_applications["/srt"] = new OutputApp(*this);
-	_srtIn = new SRTIn(*this, *this);
-	Exception ex;
-	/*if (!_srtIn->load())
-		ERROR("Unable to start SRTIn")*/
+	if (getBoolean<false>("SRT")) {
+		_srtIn = new SRTIn(*this, *this);
+		_srtIn->load();
+	}
 }
 
 void MonaSRT::manage() {
@@ -52,7 +52,10 @@ void MonaSRT::onStop() {
 		delete it.second;
 	_applications.clear();
 
-	delete _srtIn;
+	if (_srtIn) {
+		delete _srtIn;
+		_srtIn = nullptr;
+	}
 
 	// unblock ctrl+c waiting
 	_terminateSignal.set();

@@ -25,7 +25,7 @@ namespace Mona {
 
 struct MonaSRT : Server {
 	MonaSRT(const std::string& wwwPath, UInt16 cores, TerminateSignal& terminateSignal) :
-		Server(cores), _wwwPath(wwwPath), _terminateSignal(terminateSignal) { }
+		Server(cores), _wwwPath(wwwPath), _terminateSignal(terminateSignal), _srtIn(nullptr) { }
 
 	virtual ~MonaSRT() { stop(); }
 

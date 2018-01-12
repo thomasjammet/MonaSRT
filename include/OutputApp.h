@@ -37,6 +37,7 @@ struct OutputApp : virtual Mona::App {
 	
 	private:
 
+		// Push the current frame into the TS writer
 		template <class Tag>
 		Mona::shared<Mona::Buffer>& writeFrame(Mona::shared<Mona::Buffer>& pBuffer, const Tag& tag, const Mona::Packet& packet) {
 
