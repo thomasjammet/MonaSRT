@@ -44,12 +44,8 @@ struct ServerApp : ServerApplication  {
 		// starts the server
 		MonaSRT server(file().parent()+"www", getNumber<UInt32>("cores"), terminateSignal);
 
-		if (server.start(*this)) {
+		server.start(*this);
 
-			terminateSignal.wait();
-			// Stop the server
-			server.stop();
-		}
 		return Application::EXIT_OK;
 	}
 

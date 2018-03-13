@@ -64,12 +64,7 @@ class OutputApp::Client::OpenSrtPIMPL : private Thread {
 			::srt_setloghandler(nullptr, logCallback);
 			::srt_setloglevel(0xff);
 
-			Exception ex;
-			if (!Thread::start(ex)) {
-				ERROR("SRT Open: can't start monitor thread")
-				Close();
-				return false;				
-			}
+			Thread::start();
 
 			INFO("SRT opened")
 

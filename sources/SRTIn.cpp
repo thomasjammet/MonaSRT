@@ -97,11 +97,7 @@ bool SRTIn::load() {
 		return false;
 	}
 
-	if (!Thread::start(ex)) {
-		ERROR("SRT Open: can't start monitor thread")
-		stop();
-		return false;
-	}
+	Thread::start();
 
 	return true;
 }
