@@ -46,6 +46,10 @@ struct ServerApp : ServerApplication  {
 
 		server.start(*this);
 
+		terminateSignal.wait();
+		// Stop the server
+		server.stop();
+
 		return Application::EXIT_OK;
 	}
 
