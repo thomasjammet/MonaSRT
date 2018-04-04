@@ -1,1 +1,1 @@
-#define MONASRT_VERSION 0.2
+#define MONASRT_VERSION 0.2.1

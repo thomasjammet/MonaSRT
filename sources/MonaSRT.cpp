@@ -18,6 +18,7 @@
 #include "MonaSRT.h"
 #include "OutputApp.h"
 #include "Mona/Logs.h"
+#include "Mona/AMFWriter.h"
 
 using namespace std;
 
@@ -90,6 +91,29 @@ void MonaSRT::onAddressChanged(Client& client, const SocketAddress& oldAddress) 
 bool MonaSRT::onInvocation(Exception& ex, Client& client, const string& name, DataReader& arguments, UInt8 responseType) {
 	// on client message, returns "false" if "name" message is unknown
 	DEBUG(name," call from ",client.protocol," to ",client.path.empty() ? "/" : client.path)
+
+	if (name == "FCPublish") {
+		DataWriter& writer = client.writer().writeInvocation("onFCPublish");
+		if(typeid(writer)==typeid(AMFWriter))
+			((AMFWriter&)writer).amf0 = true;
+		writer.beginObject();
+		writer.writeStringProperty("level", "status");
+		writer.writeStringProperty("code", "NetStream.Publish.Start");
+		writer.writeStringProperty("description", client.path.empty() ? "/" : client.path);
+		writer.endObject();
+		return true;
+	} else if (name == "FCUnpublish") {
+		DataWriter& writer = client.writer().writeInvocation("onFCUnpublish");
+		if(typeid(writer)==typeid(AMFWriter))
+			((AMFWriter&)writer).amf0 = true;
+		writer.beginObject();
+		writer.writeStringProperty("level", "status");
+		writer.writeStringProperty("code", "NetStream.Unpublish.Success");
+		writer.writeStringProperty("description", client.path.empty() ? "/" : client.path);
+		writer.endObject();
+		return true;
+	}
+
 	if (client.hasCustomData())
 		return client.getCustomData<App::Client>()->onInvocation(ex, name, arguments,responseType);
 	return true;
